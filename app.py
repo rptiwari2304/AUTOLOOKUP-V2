@@ -106,33 +106,59 @@ if file1 and file2:
             mismatched1 = sorted(set(col1_data) - set(col2_data))
             mismatched2 = sorted(set(col2_data) - set(col1_data))
 
-            st.write("### ❌ Values in File1 not in File2")
-            st.dataframe(pd.DataFrame(mismatched1, columns=[col1_cr]))
-
-            st.write("### ❌ Values in File2 not in File1")
-            st.dataframe(pd.DataFrame(mismatched2, columns=[col2_cr]))
-
             st.session_state["mismatched1"] = mismatched1
             st.session_state["mismatched2"] = mismatched2
             st.session_state["df2_clone"] = df2.copy()
             st.session_state["task_list"] = []
 
         if "mismatched1" in st.session_state and "mismatched2" in st.session_state:
-            st.write("### 📝 Create Task List (Mapping Values)")
+            st.write("### ❌ Mismatched Values")
+
             c1, c2 = st.columns(2)
+
             with c1:
-                val1 = st.selectbox("Pick from File1 mismatched", [""] + st.session_state["mismatched1"], key="val1")
+                st.write("**File1 Unique Values**")
+                if st.session_state["mismatched1"]:
+                    selected_val1 = st.radio(
+                        "Select File1 value", 
+                        st.session_state["mismatched1"], 
+                        key="val1_radio"
+                    )
+                else:
+                    selected_val1 = None
+                    st.info("✅ No more mismatches in File1")
+
             with c2:
-                val2 = st.selectbox("Pick from File2 mismatched", [""] + st.session_state["mismatched2"], key="val2")
+                st.write("**File2 Unique Values**")
+                if st.session_state["mismatched2"]:
+                    selected_val2 = st.radio(
+                        "Select File2 value", 
+                        st.session_state["mismatched2"], 
+                        key="val2_radio"
+                    )
+                else:
+                    selected_val2 = None
+                    st.info("✅ No more mismatches in File2")
 
             if st.button("➕ Add to Task List"):
-                if val1 and val2:
-                    st.session_state["task_list"].append((val1, val2))
+                if selected_val1 and selected_val2:
+                    st.session_state["task_list"].append((selected_val1, selected_val2))
+                    # Remove chosen values from mismatched lists
+                    st.session_state["mismatched1"].remove(selected_val1)
+                    st.session_state["mismatched2"].remove(selected_val2)
 
             if st.session_state["task_list"]:
                 st.write("### 📋 Task List")
-                task_df = pd.DataFrame(st.session_state["task_list"], columns=["File1 Value", "File2 Value"])
-                st.dataframe(task_df)
+                for i, (v1, v2) in enumerate(st.session_state["task_list"]):
+                    c1, c2, c3 = st.columns([3,3,1])
+                    c1.write(v1)
+                    c2.write(v2)
+                    if c3.button("❌ Delete", key=f"del_{i}"):
+                        # Put back values into mismatched lists
+                        st.session_state["mismatched1"].append(v1)
+                        st.session_state["mismatched2"].append(v2)
+                        st.session_state["task_list"].pop(i)
+                        st.experimental_rerun()
 
                 if st.button("⚡ Execute Replacements"):
                     df2_clone = st.session_state["df2_clone"]
